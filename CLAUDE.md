@@ -75,7 +75,14 @@ Config is centralized in two non-published packages, both referenced via `worksp
 
 **Database access** goes through `@repo/database`: import the shared singleton with `import { prisma } from "@repo/database"` (the package also re-exports all generated Prisma types/enums like `Task`, `TaskStatus`, `Prisma`). The Prisma client generates into `node_modules` (default location), so `prisma generate` must have run before type-checking — handled by the `^build` chain. Schema lives at `packages/database/prisma/schema.prisma`.
 
-**Server (`apps/server`):** Express 5 app assembled in `src/app.ts` (`createApp()`), started in `src/index.ts`. Routes are `express.Router()` modules under `src/routes/`, request bodies validated with `zod` schemas in `src/schemas/`. Errors are handled centrally in `src/middleware/error.ts` — Express 5 auto-forwards rejected promises from async handlers there; `ZodError` → 400, Prisma `P2025` (not found) → 404. Relative imports use explicit `.js` extensions (NodeNext). Dev uses `tsx watch` (no build step); prod builds with `tsc` to `dist/` and runs `node dist/index.js`.
+**Server (`apps/server`):** Express 5 app assembled in `src/app.ts` (`createApp()`), started in `src/index.ts`. Code is organized by **feature module** under `src/modules/<feature>/`, each owning its vertical slice with dotted file names: `<feature>.routes.ts` → `<feature>.controller.ts` → `<feature>.service.ts`, plus `<feature>.validation.ts` (zod schemas) and `__tests__/`. The layer contract:
+
+- **routes** — `express.Router()` mapping verbs/paths to controller methods; wires `validateBody(schema)` (from `src/middleware/validate.ts`) on write endpoints.
+- **controller** — thin HTTP handlers; bodies are already validated, so they just call the service and set status codes.
+- **service** — all business logic and Prisma access; no `req`/`res`. This is the only layer that touches `@repo/database`.
+- **validation** — zod schemas + inferred input types.
+
+Add a feature by creating a new `src/modules/<feature>/` folder and mounting its router in `src/app.ts`. Shared pieces live outside modules: `src/config/env.ts`, `src/middleware/` (`error.ts`, `validate.ts`). Errors are handled centrally in `src/middleware/error.ts` — Express 5 auto-forwards rejected promises and the thrown `ZodError`; `ZodError` → 400, Prisma `P2025` (not found) → 404. Relative imports use explicit `.js` extensions (NodeNext). Dev uses `tsx watch` (no build step); prod builds with `tsc` to `dist/` and runs `node dist/index.js`.
 
 **Web (`apps/web`):** Next.js 16 (App Router, `apps/web/app/`) + React 19. The web app's `check-types` runs `next typegen && tsc --noEmit` — run typegen before type-checking when route types matter.
 
