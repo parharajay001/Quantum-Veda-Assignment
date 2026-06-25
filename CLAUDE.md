@@ -88,6 +88,20 @@ Add a feature by creating a new `src/modules/<feature>/` folder and mounting its
 
 **Web (`apps/web`):** Next.js 16 (App Router, `apps/web/app/`) + React 19. The web app's `check-types` runs `next typegen && tsc --noEmit` — run typegen before type-checking when route types matter. Client error boundaries (`app/error.tsx`, `app/global-error.tsx`) report via `@repo/logger/client`, which POSTs to `app/api/log/route.ts`; that route forwards to the winston logger server-side. `next.config.js` lists `@repo/logger` in `transpilePackages` and keeps `winston` in `serverExternalPackages` so it is never bundled for the browser.
 
+## Design system & UI conventions
+
+The web UI follows a deliberate, non-templated style (established for the auth pages) — match it when building or reshaping UI.
+
+- **Design tokens**: shadcn (new-york / neutral) via CSS variables in `packages/ui/src/styles/globals.css` (imported by `apps/web/app/globals.css`). Always use the tokens (`bg-background`, `text-foreground`, `text-muted-foreground`, `text-destructive`, `border-input`, `ring`, …) — never hardcode neutral greys. `.dark` tokens already exist.
+- **Brand accent**: violet `#8B7CF6`, used sparingly on brand surfaces only (e.g. the auth brand panel) as arbitrary Tailwind values — intentionally outside the neutral token system. Keep forms quiet (neutral tokens, one primary button); spend boldness in one place.
+- **Typography**: Geist Sans for headings/body, **Geist Mono** (`font-mono`) for small uppercase utility labels / eyebrows / metadata. Loaded in `apps/web/app/layout.tsx`, mapped to `--font-sans` / `--font-mono`.
+- **shadcn primitives** live in `packages/ui/src/components/ui/*.tsx`, imported per-file as `@repo/ui/components/ui/<name>`; keep them dependency-light (no Radix) and compose classes with `cn` from `@repo/ui/lib/utils`. (The legacy `@repo/ui/button`/`@repo/ui/card` are demo components — don't use for new UI.)
+- **App components** live in `apps/web/components/` (alias `@/components`). Reusable form pieces: `Field` (labelled input + inline error, wired with `aria-invalid` + `aria-describedby`) and `FormBanner` (form-level error, `role="alert"`).
+- **Form/validation UX**: validate client-side before submit (e.g. `apps/web/lib/auth-validation.ts`), then surface server field errors from the API's `details.fieldErrors` (carried on `ApiError`). Per-field messages turn the border destructive; non-field errors (401/409/network) go in a `FormBanner`. Keep client and server messages identical.
+- **Copy voice**: plain, active, sentence case, specific — name things by what the user does ("Use at least 8 characters.", "Sign in").
+- **Layout**: split-screen shell (`apps/web/components/auth-shell.tsx`) — brand panel `hidden lg:flex`, form column `max-w-sm` centered; compact wordmark replaces the panel on mobile.
+- **Quality floor**: responsive to mobile, visible keyboard focus (built into primitives), aria-wired errors, animation guarded by `motion-safe:`. Tailwind v4 supports arbitrary numeric spacing (e.g. `size-4.5`).
+
 ## Conventions
 
 - ESM throughout (`"type": "module"`). Shared UI components are client components (`"use client"`).
