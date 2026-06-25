@@ -35,7 +35,11 @@ Database (Prisma, run against `@repo/database`):
 
 Requires a `DATABASE_URL` (PostgreSQL). Copy `.env.example` → `.env` in `packages/database` and `apps/server`.
 
-There is **no test runner configured** in this repo yet.
+Tests (Jest):
+
+- `pnpm test` — run all suites (`turbo run test`). Scope with `pnpm --filter=server test` / `pnpm --filter=web test`, or `pnpm --filter=server test:watch`.
+- Each app owns a `jest.config.mjs`. **`apps/web`** uses `next/jest` (SWC transform, jsdom, React Testing Library; `jest.setup.ts` loads `@testing-library/jest-dom`). **`apps/server`** uses `@swc/jest` (node env) with `supertest` against the `createApp()` factory; the database is mocked via `jest.mock("@repo/database", ...)` so no Postgres is needed.
+- Tests live in `__tests__/` folders as `.ts`/`.tsx`; Jest globals are ambient (no per-file imports) via `@types/jest`. In `apps/server`, `jest.mock` must stay at top level so `@swc/jest` hoists it above the imports.
 
 ## Architecture
 
@@ -77,3 +81,7 @@ Keep commits scoped to one logical change; prefer separate commits per workspace
 When a commit needs an extended description, use a body of `-` bullet points (one per change) rather than long prose paragraphs. Short, self-explanatory commits need only the subject line.
 
 Do not add `Co-Authored-By` trailers or any tool/assistant attribution to commit messages.
+
+### Pre-commit hook
+
+A Husky hook (`.husky/pre-commit`) gates every commit: it runs `lint-staged` (prettier `--write` on staged files) then `turbo run lint check-types test build` across all workspaces. Linting is handled by `turbo run lint` (each package has its own `eslint.config.js`; ESLint can't run from the repo root, so it is intentionally not in `lint-staged`). Turbo caches these, so repeat commits are fast. The hook is installed by the root `prepare` script on `pnpm install`. Don't bypass it with `--no-verify` unless explicitly asked.

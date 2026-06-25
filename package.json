@@ -5,13 +5,17 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
+    "test": "turbo run test",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
     "db:generate": "turbo run build --filter=@repo/database",
     "db:migrate": "turbo run db:migrate --filter=@repo/database",
-    "db:studio": "turbo run db:studio --filter=@repo/database"
+    "db:studio": "turbo run db:studio --filter=@repo/database",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10",
     "prettier": "^3.7.4",
     "turbo": "^2.9.18",
     "typescript": "5.9.2"

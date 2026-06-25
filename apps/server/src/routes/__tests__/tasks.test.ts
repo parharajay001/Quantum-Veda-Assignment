@@ -1,0 +1,50 @@
+import request from "supertest";
+import { createApp } from "../../app.js";
+import { prisma } from "@repo/database";
+
+// Mock the shared database package so no real Postgres connection is needed.
+// `prisma` is used by the tasks router and `Prisma` (the error namespace) is
+// imported by the central error middleware. (@swc/jest hoists this jest.mock
+// call above the imports above.)
+jest.mock("@repo/database", () => ({
+  prisma: {
+    task: { findMany: jest.fn(), create: jest.fn() },
+  },
+  Prisma: {
+    PrismaClientKnownRequestError: class PrismaClientKnownRequestError extends Error {
+      code: string;
+      constructor(message: string, code: string) {
+        super(message);
+        this.code = code;
+      }
+    },
+  },
+}));
+
+const findMany = jest.mocked(prisma.task.findMany);
+const create = jest.mocked(prisma.task.create);
+
+describe("/api/tasks", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("GET / returns the tasks from the database", async () => {
+    const tasks = [{ id: "1", title: "Test task", status: "TODO" }];
+    findMany.mockResolvedValue(tasks as never);
+
+    const res = await request(createApp()).get("/api/tasks");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(tasks);
+    expect(findMany).toHaveBeenCalledTimes(1);
+  });
+
+  it("POST / with an invalid body returns 400 and does not touch the database", async () => {
+    const res = await request(createApp()).post("/api/tasks").send({});
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty("error", "Validation failed");
+    expect(create).not.toHaveBeenCalled();
+  });
+});
