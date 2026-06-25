@@ -99,7 +99,12 @@ Do not add `Co-Authored-By` trailers or any tool/assistant attribution to commit
 
 ### Pre-commit hook
 
-A Husky hook (`.husky/pre-commit`) gates every commit: it runs `lint-staged` (prettier `--write` on staged files) then `turbo run lint check-types test build` across all workspaces. Linting is handled by `turbo run lint` (each package has its own `eslint.config.js`; ESLint can't run from the repo root, so it is intentionally not in `lint-staged`). Turbo caches these, so repeat commits are fast. The hook is installed by the root `prepare` script on `pnpm install`. Don't bypass it with `--no-verify` unless explicitly asked.
+Two Husky hooks gate the workflow (installed by the root `prepare` script on `pnpm install`); don't bypass them with `--no-verify` unless explicitly asked:
+
+- **`.husky/pre-commit`** — runs `lint-staged` (prettier `--write` on staged files) then `turbo run lint check-types test build` across all workspaces. Linting is handled by `turbo run lint` (each package has its own `eslint.config.js`; ESLint can't run from the repo root, so it is intentionally not in `lint-staged`).
+- **`.husky/pre-push`** — re-runs `turbo run lint check-types test build` as a final gate before code leaves the machine (catches commits made with `--no-verify` or authored elsewhere).
+
+Turbo caches all of these, so when nothing changed the hooks complete in milliseconds (`FULL TURBO`).
 
 ### CI
 
