@@ -9,4 +9,10 @@ export const env = {
   // production MUST set JWT_SECRET to a strong, random value.
   jwtSecret: process.env.JWT_SECRET ?? "dev-only-insecure-jwt-secret",
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "7d",
+  // Origin allowed by CORS and credentialed (cookie) requests — the web app.
+  webOrigin: process.env.WEB_ORIGIN ?? "http://localhost:3000",
+  // Name of the httpOnly cookie holding the auth token.
+  cookieName: "access_token",
+  // bcrypt cost factor for password hashing.
+  bcryptRounds: 10,
 };

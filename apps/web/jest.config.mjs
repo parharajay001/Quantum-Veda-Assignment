@@ -10,6 +10,10 @@ const createJestConfig = nextJest({
 const config = {
   testEnvironment: "jest-environment-jsdom",
   setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
+  // Mirror the tsconfig `@/*` path alias for Jest module resolution.
+  moduleNameMapper: {
+    "^@/(.*)$": "<rootDir>/$1",
+  },
 };
 
 export default createJestConfig(config);

@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import { Prisma } from "@repo/database";
 import { logger } from "@repo/logger";
 import { ZodError } from "zod";
+import { AppError } from "../lib/app-error.js";
 
 export function notFoundHandler(_req: Request, res: Response) {
   res.status(404).json({ error: "Not found" });
@@ -19,6 +20,11 @@ export function errorHandler(
     return res
       .status(400)
       .json({ error: "Validation failed", details: err.flatten() });
+  }
+
+  // Application errors carry their own HTTP status (e.g. 401, 409).
+  if (err instanceof AppError) {
+    return res.status(err.statusCode).json({ error: err.message });
   }
 
   // P2025 = record required for the operation was not found.

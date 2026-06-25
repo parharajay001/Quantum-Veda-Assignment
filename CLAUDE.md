@@ -38,6 +38,7 @@ Database (Prisma, run against `@repo/database`):
 - `pnpm db:generate` — regenerate the Prisma client (alias for `turbo run build --filter=@repo/database`; `prisma generate` also runs automatically before any dependent's `build`/`dev`/`check-types` via the topological `^build` dependency).
 - `pnpm db:migrate` — `prisma migrate dev` (create/apply a migration in dev).
 - `pnpm db:studio` — open Prisma Studio.
+- `pnpm db:seed` — populate the dev DB via `packages/database/prisma/seed.ts` (5 users + sample tasks; idempotent — users upserted, tasks reset). All seeded users share the password `password123`. The seed runner is declared under `package.json#prisma.seed`, so `prisma migrate reset` also re-seeds.
 - Other Prisma scripts (`db:deploy`, `db:push`) live in `packages/database/package.json`.
 
 Environment files: each app/package has its own `.env.example` — `packages/database` and `apps/server` (`DATABASE_URL`, `PORT`, `LOG_LEVEL`), and `apps/web` (`NEXT_PUBLIC_API_URL`, the backend base URL exposed to the browser; `NEXT_PUBLIC_LOG_LEVEL` for the browser client logger). All env keys are declared in `turbo.json` `globalEnv` so Turbo caching and the `turbo/no-undeclared-env-vars` lint rule stay correct — add new keys there too.
@@ -86,6 +87,20 @@ Config is centralized in two non-published packages, both referenced via `worksp
 Add a feature by creating a new `src/modules/<feature>/` folder and mounting its router in `src/app.ts`. Shared pieces live outside modules: `src/config/env.ts`, `src/middleware/` (`error.ts`, `validate.ts`, `request-logger.ts`). `requestLogger` is mounted in `createApp()` right after `express.json()` and logs one structured line per request (method, url, status, duration) via `@repo/logger`; the central error handler logs unhandled errors through the same logger. Errors are handled centrally in `src/middleware/error.ts` — Express 5 auto-forwards rejected promises and the thrown `ZodError`; `ZodError` → 400, Prisma `P2025` (not found) → 404. Relative imports use explicit `.js` extensions (NodeNext). Dev uses `tsx watch` (no build step); prod builds with `tsc` to `dist/` and runs `node dist/index.js`.
 
 **Web (`apps/web`):** Next.js 16 (App Router, `apps/web/app/`) + React 19. The web app's `check-types` runs `next typegen && tsc --noEmit` — run typegen before type-checking when route types matter. Client error boundaries (`app/error.tsx`, `app/global-error.tsx`) report via `@repo/logger/client`, which POSTs to `app/api/log/route.ts`; that route forwards to the winston logger server-side. `next.config.js` lists `@repo/logger` in `transpilePackages` and keeps `winston` in `serverExternalPackages` so it is never bundled for the browser.
+
+## Design system & UI conventions
+
+The web UI follows a deliberate, non-templated style (established for the auth pages) — match it when building or reshaping UI.
+
+- **Design tokens**: shadcn (new-york / neutral) via CSS variables in `packages/ui/src/styles/globals.css` (imported by `apps/web/app/globals.css`). Always use the tokens (`bg-background`, `text-foreground`, `text-muted-foreground`, `text-destructive`, `border-input`, `ring`, …) — never hardcode neutral greys. `.dark` tokens already exist.
+- **Brand accent**: violet `#8B7CF6`, used sparingly on brand surfaces only (e.g. the auth brand panel) as arbitrary Tailwind values — intentionally outside the neutral token system. Keep forms quiet (neutral tokens, one primary button); spend boldness in one place.
+- **Typography**: Geist Sans for headings/body, **Geist Mono** (`font-mono`) for small uppercase utility labels / eyebrows / metadata. Loaded in `apps/web/app/layout.tsx`, mapped to `--font-sans` / `--font-mono`.
+- **shadcn primitives** live in `packages/ui/src/components/ui/*.tsx`, imported per-file as `@repo/ui/components/ui/<name>`; keep them dependency-light (no Radix) and compose classes with `cn` from `@repo/ui/lib/utils`. (The legacy `@repo/ui/button`/`@repo/ui/card` are demo components — don't use for new UI.)
+- **App components** live in `apps/web/components/` (alias `@/components`). Reusable form pieces: `Field` (labelled input + inline error, wired with `aria-invalid` + `aria-describedby`) and `FormBanner` (form-level error, `role="alert"`).
+- **Form/validation UX**: validate client-side before submit (e.g. `apps/web/lib/auth-validation.ts`), then surface server field errors from the API's `details.fieldErrors` (carried on `ApiError`). Per-field messages turn the border destructive; non-field errors (401/409/network) go in a `FormBanner`. Keep client and server messages identical.
+- **Copy voice**: plain, active, sentence case, specific — name things by what the user does ("Use at least 8 characters.", "Sign in").
+- **Layout**: split-screen shell (`apps/web/components/auth-shell.tsx`) — brand panel `hidden lg:flex`, form column `max-w-sm` centered; compact wordmark replaces the panel on mobile.
+- **Quality floor**: responsive to mobile, visible keyboard focus (built into primitives), aria-wired errors, animation guarded by `motion-safe:`. Tailwind v4 supports arbitrary numeric spacing (e.g. `size-4.5`).
 
 ## Conventions
 

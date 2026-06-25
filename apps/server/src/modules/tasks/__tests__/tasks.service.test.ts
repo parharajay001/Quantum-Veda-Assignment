@@ -23,12 +23,14 @@ describe("taskService", () => {
     expect(findMany).toHaveBeenCalledWith({ orderBy: { createdAt: "desc" } });
   });
 
-  it("create() forwards the validated payload to prisma", async () => {
+  it("create() forwards the validated payload plus createdById to prisma", async () => {
     const input = { title: "New task" };
-    const created = { id: "2", ...input };
+    const created = { id: "2", ...input, createdById: "u1" };
     create.mockResolvedValue(created as never);
 
-    await expect(taskService.create(input)).resolves.toEqual(created);
-    expect(create).toHaveBeenCalledWith({ data: input });
+    await expect(taskService.create(input, "u1")).resolves.toEqual(created);
+    expect(create).toHaveBeenCalledWith({
+      data: { ...input, createdById: "u1" },
+    });
   });
 });
