@@ -1,0 +1,79 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Overview
+
+Turborepo monorepo managed with **pnpm** (`pnpm@9`, Node >=18) for a task-management product. Workspaces are `apps/*` and `packages/*` (see `pnpm-workspace.yaml`):
+
+- `apps/web` — Next.js 16 (App Router) + React 19 frontend, port 3000.
+- `apps/server` — Express 5 + TypeScript REST API, port 3001 (`/health`, `/api/tasks` CRUD).
+- `packages/database` (`@repo/database`) — Prisma + PostgreSQL: schema, generated client, and a `prisma` singleton.
+- `packages/ui` (`@repo/ui`) — shared React components.
+- `packages/eslint-config`, `packages/typescript-config` — shared presets.
+
+(The root README is the unmodified `create-turbo` starter text and references a non-existent `docs` app — ignore it.)
+
+## Commands
+
+Run from the repo root. Turbo fans tasks out across all workspaces; use `--filter` to scope.
+
+- `pnpm dev` — run all dev servers (`web` serves on port 3000)
+- `pnpm build` — build all apps/packages
+- `pnpm lint` — ESLint across all workspaces (configured with `--max-warnings 0`, so warnings fail)
+- `pnpm check-types` — type-check all workspaces (no emit)
+- `pnpm format` — Prettier write over all `.ts/.tsx/.md`
+
+Scope to one workspace, e.g. `pnpm turbo dev --filter=web` or `pnpm turbo build --filter=server`.
+
+Database (Prisma, run against `@repo/database`):
+
+- `pnpm db:generate` — regenerate the Prisma client (alias for `turbo run build --filter=@repo/database`; `prisma generate` also runs automatically before any dependent's `build`/`dev`/`check-types` via the topological `^build` dependency).
+- `pnpm db:migrate` — `prisma migrate dev` (create/apply a migration in dev).
+- `pnpm db:studio` — open Prisma Studio.
+- Other Prisma scripts (`db:deploy`, `db:push`) live in `packages/database/package.json`.
+
+Requires a `DATABASE_URL` (PostgreSQL). Copy `.env.example` → `.env` in `packages/database` and `apps/server`.
+
+There is **no test runner configured** in this repo yet.
+
+## Architecture
+
+**Shared packages are consumed as raw TypeScript source, not built artifacts.** `@repo/ui` exposes `"./*": "./src/*.tsx"`, so imports are per-file: `import { Button } from "@repo/ui/button"`. There is no build step or barrel/index for the UI package — Next.js transpiles the source directly. Add a new component as `packages/ui/src/<name>.tsx` and it's immediately importable as `@repo/ui/<name>` (or scaffold with `pnpm --filter=@repo/ui generate:component`, which runs `turbo gen react-component`).
+
+Config is centralized in two non-published packages, both referenced via `workspace:*`:
+
+- `@repo/eslint-config` — flat-config presets exported as `./base`, `./next-js`, `./node`, `./react-internal`. Apps/packages import the relevant one into their own `eslint.config.js`. Uses `eslint-plugin-only-warn`, so all rule violations surface as warnings (which `--max-warnings 0` then turns into hard failures).
+- `@repo/typescript-config` — base tsconfigs exported as `base.json`, `nextjs.json`, `node.json`, `react-library.json`, extended by each workspace's `tsconfig.json`. Node packages (`server`, `database`) extend `node.json`.
+
+**Database access** goes through `@repo/database`: import the shared singleton with `import { prisma } from "@repo/database"` (the package also re-exports all generated Prisma types/enums like `Task`, `TaskStatus`, `Prisma`). The Prisma client generates into `node_modules` (default location), so `prisma generate` must have run before type-checking — handled by the `^build` chain. Schema lives at `packages/database/prisma/schema.prisma`.
+
+**Server (`apps/server`):** Express 5 app assembled in `src/app.ts` (`createApp()`), started in `src/index.ts`. Routes are `express.Router()` modules under `src/routes/`, request bodies validated with `zod` schemas in `src/schemas/`. Errors are handled centrally in `src/middleware/error.ts` — Express 5 auto-forwards rejected promises from async handlers there; `ZodError` → 400, Prisma `P2025` (not found) → 404. Relative imports use explicit `.js` extensions (NodeNext). Dev uses `tsx watch` (no build step); prod builds with `tsc` to `dist/` and runs `node dist/index.js`.
+
+**Web (`apps/web`):** Next.js 16 (App Router, `apps/web/app/`) + React 19. The web app's `check-types` runs `next typegen && tsc --noEmit` — run typegen before type-checking when route types matter.
+
+## Conventions
+
+- ESM throughout (`"type": "module"`). Shared UI components are client components (`"use client"`).
+- Caching: `build` outputs `.next/**` and `dist/**`; `dev` is uncached and persistent (see `turbo.json`). The Turbo TUI is enabled (`"ui": "tui"`). `DATABASE_URL`/`PORT`/`NODE_ENV` are declared in `globalEnv`.
+
+## Commit Conventions
+
+Follow [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): subject`.
+
+- **type** — one of `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `build`, `ci`, `chore`, `style`, `revert`.
+- **scope** (optional but encouraged) — the affected workspace, named without the `@repo/` prefix: `web`, `server`, `database`, `ui`, `eslint-config`, `typescript-config`. Use `repo` for monorepo-wide changes (root config, turbo, tooling).
+- **subject** — imperative mood, lower-case, no trailing period (e.g. "add task status filter", not "Added ...").
+- Breaking changes: append `!` after the type/scope (`feat(database)!: ...`) and/or add a `BREAKING CHANGE:` footer.
+
+Examples:
+
+- `feat(server): add PATCH /api/tasks/:id endpoint`
+- `fix(database): correct TaskStatus default to TODO`
+- `chore(repo): bump turbo to 2.10`
+
+Keep commits scoped to one logical change; prefer separate commits per workspace when a change spans several.
+
+When a commit needs an extended description, use a body of `-` bullet points (one per change) rather than long prose paragraphs. Short, self-explanatory commits need only the subject line.
+
+Do not add `Co-Authored-By` trailers or any tool/assistant attribution to commit messages.
