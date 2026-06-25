@@ -1,9 +1,9 @@
 import request from "supertest";
-import { createApp } from "../../app.js";
+import { createApp } from "../../../app.js";
 import { prisma } from "@repo/database";
 
 // Mock the shared database package so no real Postgres connection is needed.
-// `prisma` is used by the tasks router and `Prisma` (the error namespace) is
+// `prisma` is used by the task service and `Prisma` (the error namespace) is
 // imported by the central error middleware. (@swc/jest hoists this jest.mock
 // call above the imports above.)
 jest.mock("@repo/database", () => ({
