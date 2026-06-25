@@ -26,6 +26,12 @@ Run from the repo root. Turbo fans tasks out across all workspaces; use `--filte
 
 Scope to one workspace, e.g. `pnpm turbo dev --filter=web` or `pnpm turbo build --filter=server`.
 
+Local Postgres (Docker, dev only — apps still run on the host):
+
+- `pnpm db:up` — start the Postgres container (`docker compose up -d`).
+- `pnpm db:down` — stop it. `pnpm db:reset` — drop the volume and recreate a clean DB.
+- Credentials live in `docker-compose.yml` (`user`/`password`/`taskdb`) and must stay in sync with the `DATABASE_URL` in the `.env.example` files.
+
 Database (Prisma, run against `@repo/database`):
 
 - `pnpm db:generate` — regenerate the Prisma client (alias for `turbo run build --filter=@repo/database`; `prisma generate` also runs automatically before any dependent's `build`/`dev`/`check-types` via the topological `^build` dependency).
@@ -33,7 +39,9 @@ Database (Prisma, run against `@repo/database`):
 - `pnpm db:studio` — open Prisma Studio.
 - Other Prisma scripts (`db:deploy`, `db:push`) live in `packages/database/package.json`.
 
-Requires a `DATABASE_URL` (PostgreSQL). Copy `.env.example` → `.env` in `packages/database` and `apps/server`.
+Environment files: each app/package has its own `.env.example` — `packages/database` and `apps/server` (`DATABASE_URL`, `PORT`), and `apps/web` (`NEXT_PUBLIC_API_URL`, the backend base URL exposed to the browser). All env keys are declared in `turbo.json` `globalEnv` so Turbo caching and the `turbo/no-undeclared-env-vars` lint rule stay correct — add new keys there too.
+
+First-time setup: `pnpm db:up`, copy each `.env.example` → `.env` (in `packages/database`, `apps/server`, `apps/web`), then `pnpm db:migrate` and `pnpm dev`.
 
 Tests (Jest):
 
