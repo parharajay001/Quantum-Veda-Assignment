@@ -68,9 +68,11 @@ describe("/api/tasks", () => {
       .send({ title: "New task" });
 
     expect(res.status).toBe(201);
-    expect(create).toHaveBeenCalledWith({
-      data: { title: "New task", createdById: "u1" },
-    });
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { title: "New task", createdById: "u1" },
+      }),
+    );
   });
 
   it("POST / with an invalid body returns 400 and does not touch the database", async () => {
@@ -81,6 +83,43 @@ describe("/api/tasks", () => {
 
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty("error", "Validation failed");
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("POST / accepts priority, dueDate and assignedToId and coerces the date", async () => {
+    create.mockResolvedValue({ id: "1" } as never);
+
+    const res = await request(createApp())
+      .post("/api/tasks")
+      .set("Authorization", authHeader)
+      .send({
+        title: "Full task",
+        priority: "HIGH",
+        dueDate: "2026-07-01T00:00:00.000Z",
+        assignedToId: "u2",
+      });
+
+    expect(res.status).toBe(201);
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          title: "Full task",
+          priority: "HIGH",
+          dueDate: new Date("2026-07-01T00:00:00.000Z"),
+          assignedToId: "u2",
+          createdById: "u1",
+        },
+      }),
+    );
+  });
+
+  it("POST / rejects an unknown priority value", async () => {
+    const res = await request(createApp())
+      .post("/api/tasks")
+      .set("Authorization", authHeader)
+      .send({ title: "Bad", priority: "SOMETIME" });
+
+    expect(res.status).toBe(400);
     expect(create).not.toHaveBeenCalled();
   });
 });

@@ -15,12 +15,20 @@ describe("taskService", () => {
     jest.clearAllMocks();
   });
 
-  it("list() returns tasks ordered by createdAt desc", async () => {
-    const tasks = [{ id: "1", title: "A" }];
+  it("list() returns unarchived tasks ordered by status then position, with the assignee included", async () => {
+    const tasks = [
+      { id: "1", title: "A", assignedTo: { id: "u1", name: "Ada" } },
+    ];
     findMany.mockResolvedValue(tasks as never);
 
     await expect(taskService.list()).resolves.toEqual(tasks);
-    expect(findMany).toHaveBeenCalledWith({ orderBy: { createdAt: "desc" } });
+    expect(findMany).toHaveBeenCalledWith({
+      where: { archived: false },
+      orderBy: [{ status: "asc" }, { position: "asc" }],
+      include: {
+        assignedTo: { select: { id: true, name: true, avatarUrl: true } },
+      },
+    });
   });
 
   it("create() forwards the validated payload plus createdById to prisma", async () => {
@@ -29,8 +37,8 @@ describe("taskService", () => {
     create.mockResolvedValue(created as never);
 
     await expect(taskService.create(input, "u1")).resolves.toEqual(created);
-    expect(create).toHaveBeenCalledWith({
-      data: { ...input, createdById: "u1" },
-    });
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { ...input, createdById: "u1" } }),
+    );
   });
 });

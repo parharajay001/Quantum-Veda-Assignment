@@ -41,9 +41,10 @@ export const authController = {
     res.json({ user });
   },
 
-  // Populated by requireAuth from the verified token.
-  me(req: Request, res: Response) {
-    res.json({ user: req.user });
+  // req.user (from the token) only has id/email/role; load the full profile.
+  async me(req: Request, res: Response) {
+    const user = await authService.me(req.user!.id);
+    res.json({ user });
   },
 
   logout(_req: Request, res: Response) {

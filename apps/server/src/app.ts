@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import { healthRouter } from "./modules/health/health.routes.js";
 import { taskRouter } from "./modules/tasks/tasks.routes.js";
 import { authRouter } from "./modules/auth/auth.routes.js";
+import { userRouter } from "./modules/users/users.routes.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
 import { requestLogger } from "./middleware/request-logger.js";
 import { env } from "./config/env.js";
@@ -21,6 +22,7 @@ export function createApp(): Express {
   app.use("/health", healthRouter);
   app.use("/api/auth", authRouter);
   app.use("/api/tasks", taskRouter);
+  app.use("/api/users", userRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
