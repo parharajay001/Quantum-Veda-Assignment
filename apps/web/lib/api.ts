@@ -11,12 +11,17 @@ export interface AuthUser {
   updatedAt: string;
 }
 
+export type FieldErrors = Record<string, string[] | undefined>;
+
 export class ApiError extends Error {
   readonly status: number;
-  constructor(status: number, message: string) {
+  // Per-field messages from the server's Zod validation (when status is 400).
+  readonly fieldErrors?: FieldErrors;
+  constructor(status: number, message: string, fieldErrors?: FieldErrors) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.fieldErrors = fieldErrors;
   }
 }
 
@@ -33,11 +38,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   const body = (await res.json().catch(() => ({}))) as {
     error?: string;
+    details?: { fieldErrors?: FieldErrors; formErrors?: string[] };
     user?: AuthUser;
   };
 
   if (!res.ok) {
-    throw new ApiError(res.status, body.error ?? "Request failed");
+    const message =
+      body.details?.formErrors?.[0] ?? body.error ?? "Something went wrong.";
+    throw new ApiError(res.status, message, body.details?.fieldErrors);
   }
 
   return body as T;

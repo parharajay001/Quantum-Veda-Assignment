@@ -72,4 +72,23 @@ describe("RegisterPage", () => {
     );
     expect(push).not.toHaveBeenCalled();
   });
+
+  it("flags a too-short password and does not call the API", async () => {
+    render(<RegisterPage />);
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "Ada" },
+    });
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "ada@example.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "short" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /create account/i }));
+
+    expect(
+      await screen.findByText("Use at least 8 characters."),
+    ).toBeInTheDocument();
+    expect(register).not.toHaveBeenCalled();
+  });
 });

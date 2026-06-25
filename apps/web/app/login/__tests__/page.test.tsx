@@ -65,4 +65,13 @@ describe("LoginPage", () => {
     );
     expect(push).not.toHaveBeenCalled();
   });
+
+  it("shows field errors and does not call the API when fields are empty", async () => {
+    render(<LoginPage />);
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+
+    expect(await screen.findByText("Enter your email.")).toBeInTheDocument();
+    expect(screen.getByText("Enter your password.")).toBeInTheDocument();
+    expect(login).not.toHaveBeenCalled();
+  });
 });
