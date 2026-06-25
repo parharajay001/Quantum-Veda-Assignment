@@ -69,6 +69,13 @@ Config is centralized in two non-published packages, both referenced via `worksp
 - ESM throughout (`"type": "module"`). Shared UI components are client components (`"use client"`).
 - Caching: `build` outputs `.next/**` and `dist/**`; `dev` is uncached and persistent (see `turbo.json`). The Turbo TUI is enabled (`"ui": "tui"`). `DATABASE_URL`/`PORT`/`NODE_ENV` are declared in `globalEnv`.
 
+## Branching
+
+Never commit directly to `main`/`master` — create a branch for every change.
+
+- **Name**: `<type>/<short-kebab-summary>`, where `type` is a commit type (`feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `ci`, …). Optionally include a scope: `<type>/<scope>-<summary>`. Examples: `feat/task-filtering`, `fix/health-route-status`, `ci/github-actions`, `chore/server-deps`.
+- Branch off the latest default branch; keep each branch focused on one logical change; open a PR to merge.
+
 ## Commit Conventions
 
 Follow [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): subject`.
@@ -93,3 +100,7 @@ Do not add `Co-Authored-By` trailers or any tool/assistant attribution to commit
 ### Pre-commit hook
 
 A Husky hook (`.husky/pre-commit`) gates every commit: it runs `lint-staged` (prettier `--write` on staged files) then `turbo run lint check-types test build` across all workspaces. Linting is handled by `turbo run lint` (each package has its own `eslint.config.js`; ESLint can't run from the repo root, so it is intentionally not in `lint-staged`). Turbo caches these, so repeat commits are fast. The hook is installed by the root `prepare` script on `pnpm install`. Don't bypass it with `--no-verify` unless explicitly asked.
+
+### CI
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on pushes to `main`/`master` and on every PR. It runs the same gate as the hook — `turbo run lint check-types test build` — on Node 22 with pnpm and a Turbo cache. Tests need no database (Postgres is mocked), so CI runs no service container. Keep the CI suite and the pre-commit suite in sync when changing either.
