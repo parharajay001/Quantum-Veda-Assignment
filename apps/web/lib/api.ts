@@ -1,5 +1,7 @@
-// Browser-side client for the auth API. All requests include credentials so the
-// httpOnly auth cookie is sent/received across the 3000 -> 3001 origin.
+// Browser-side client for the auth/task APIs. All requests include credentials
+// so the httpOnly auth cookie is sent/received across the 3000 -> 3001 origin.
+
+import type { BoardTask, TaskAssignee, TaskInput } from "./tasks";
 
 export interface AuthUser {
   id: string;
@@ -78,4 +80,27 @@ export const authApi = {
   logout: () => request<void>("/api/auth/logout", { method: "POST" }),
 
   me: () => request<{ user: AuthUser }>("/api/auth/me"),
+};
+
+export const taskApi = {
+  list: () => request<BoardTask[]>("/api/tasks"),
+
+  create: (input: TaskInput) =>
+    request<BoardTask>("/api/tasks", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+
+  update: (id: string, input: Partial<TaskInput> & { position?: number }) =>
+    request<BoardTask>(`/api/tasks/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    }),
+
+  remove: (id: string) =>
+    request<void>(`/api/tasks/${id}`, { method: "DELETE" }),
+};
+
+export const userApi = {
+  list: () => request<TaskAssignee[]>("/api/users"),
 };
