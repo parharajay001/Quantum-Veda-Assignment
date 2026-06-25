@@ -49,6 +49,21 @@ Tests (Jest):
 - Each app owns a `jest.config.mjs`. **`apps/web`** uses `next/jest` (SWC transform, jsdom, React Testing Library; `jest.setup.ts` loads `@testing-library/jest-dom`). **`apps/server`** uses `@swc/jest` (node env) with `supertest` against the `createApp()` factory; the database is mocked via `jest.mock("@repo/database", ...)` so no Postgres is needed.
 - Tests live in `__tests__/` folders as `.ts`/`.tsx`; Jest globals are ambient (no per-file imports) via `@types/jest`. In `apps/server`, `jest.mock` must stay at top level so `@swc/jest` hoists it above the imports.
 
+## Development Workflow (TDD)
+
+Develop test-first using red → green → refactor:
+
+1. **Red** — write a failing test that specifies the desired behaviour before touching implementation. Run it in watch mode (`pnpm --filter=<pkg> test:watch`) and confirm it fails for the right reason.
+2. **Green** — write the minimum code to make the test pass.
+3. **Refactor** — clean up code and tests while keeping the suite green.
+
+Guidelines:
+
+- A bug fix starts with a failing test that reproduces the bug; a feature starts with a test describing the new behaviour. Don't add production code without a test that drives it.
+- Match the existing test patterns: `supertest` against `createApp()` with `@repo/database` mocked for `apps/server` routes; React Testing Library (behaviour/roles, not implementation details) for `apps/web`.
+- Test behaviour and public contracts, not internals. Keep unit tests fast and DB-free (mock Prisma); reserve real Postgres for any future integration tests.
+- The pre-commit/pre-push hooks and CI run the full suite, so keep `pnpm test` green before committing.
+
 ## Architecture
 
 **Shared packages are consumed as raw TypeScript source, not built artifacts.** `@repo/ui` exposes `"./*": "./src/*.tsx"`, so imports are per-file: `import { Button } from "@repo/ui/button"`. There is no build step or barrel/index for the UI package — Next.js transpiles the source directly. Add a new component as `packages/ui/src/<name>.tsx` and it's immediately importable as `@repo/ui/<name>` (or scaffold with `pnpm --filter=@repo/ui generate:component`, which runs `turbo gen react-component`).
