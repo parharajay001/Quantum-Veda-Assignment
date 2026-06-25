@@ -34,6 +34,10 @@ export const config = [
       ...pluginReactHooks.configs.recommended.rules,
       // React scope no longer necessary with new JSX transform.
       "react/react-in-jsx-scope": "off",
+      // TypeScript already validates props; the runtime prop-types check is
+      // redundant and misfires on derived DOM attribute types (e.g. forwardRef
+      // components typed via React.InputHTMLAttributes).
+      "react/prop-types": "off",
     },
   },
 ];
