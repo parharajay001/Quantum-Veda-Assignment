@@ -38,6 +38,7 @@ Database (Prisma, run against `@repo/database`):
 - `pnpm db:generate` — regenerate the Prisma client (alias for `turbo run build --filter=@repo/database`; `prisma generate` also runs automatically before any dependent's `build`/`dev`/`check-types` via the topological `^build` dependency).
 - `pnpm db:migrate` — `prisma migrate dev` (create/apply a migration in dev).
 - `pnpm db:studio` — open Prisma Studio.
+- `pnpm db:seed` — populate the dev DB via `packages/database/prisma/seed.ts` (5 users + sample tasks; idempotent — users upserted, tasks reset). All seeded users share the password `password123`. The seed runner is declared under `package.json#prisma.seed`, so `prisma migrate reset` also re-seeds.
 - Other Prisma scripts (`db:deploy`, `db:push`) live in `packages/database/package.json`.
 
 Environment files: each app/package has its own `.env.example` — `packages/database` and `apps/server` (`DATABASE_URL`, `PORT`, `LOG_LEVEL`), and `apps/web` (`NEXT_PUBLIC_API_URL`, the backend base URL exposed to the browser; `NEXT_PUBLIC_LOG_LEVEL` for the browser client logger). All env keys are declared in `turbo.json` `globalEnv` so Turbo caching and the `turbo/no-undeclared-env-vars` lint rule stay correct — add new keys there too.

@@ -13,6 +13,7 @@
     "db:reset": "docker compose down -v && docker compose up -d",
     "db:generate": "turbo run build --filter=@repo/database",
     "db:migrate": "turbo run db:migrate --filter=@repo/database",
+    "db:seed": "pnpm --filter=@repo/database db:seed",
     "db:studio": "turbo run db:studio --filter=@repo/database",
     "prepare": "husky"
   },
