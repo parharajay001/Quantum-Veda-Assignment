@@ -11,16 +11,62 @@ datasource db {
 }
 
 enum TaskStatus {
-  TODO
+  DRAFT
+  PENDING
   IN_PROGRESS
-  DONE
+  COMPLETED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(MEMBER)
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  createdTasks    Task[] @relation("TaskCreatedBy")
+  assignedTasks   Task[] @relation("TaskAssignedTo")
+  assignedByTasks Task[] @relation("TaskAssignedBy")
 }
 
 model Task {
-  id          String     @id @default(cuid())
+  id          String       @id @default(cuid())
   title       String
   description String?
-  status      TaskStatus @default(TODO)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  status      TaskStatus   @default(DRAFT)
+  priority    TaskPriority @default(MEDIUM)
+  dueDate     DateTime?
+  position    Int          @default(0) // ordering within a status column
+  archived    Boolean      @default(false)
+  completedAt DateTime?
+
+  // Assignment relations — all nullable while auth is not yet wired up.
+  createdById  String?
+  createdBy    User?   @relation("TaskCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  assignedToId String?
+  assignedTo   User?   @relation("TaskAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedById String?
+  assignedBy   User?   @relation("TaskAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([assignedToId])
+  @@index([createdById])
 }
