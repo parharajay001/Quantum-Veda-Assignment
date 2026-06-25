@@ -13,7 +13,10 @@ export const taskController = {
   },
 
   async create(req: Request, res: Response) {
-    const task = await taskService.create(req.body as CreateTaskInput);
+    const task = await taskService.create(
+      req.body as CreateTaskInput,
+      req.user!.id,
+    );
     res.status(201).json(task);
   },
 

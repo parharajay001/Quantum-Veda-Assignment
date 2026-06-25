@@ -9,7 +9,8 @@
     "LOG_LEVEL",
     "NEXT_PUBLIC_LOG_LEVEL",
     "JWT_SECRET",
-    "JWT_EXPIRES_IN"
+    "JWT_EXPIRES_IN",
+    "WEB_ORIGIN"
   ],
   "tasks": {
     "build": {

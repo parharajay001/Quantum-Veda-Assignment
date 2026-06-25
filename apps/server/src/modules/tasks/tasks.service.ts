@@ -11,8 +11,8 @@ export const taskService = {
     return prisma.task.findUniqueOrThrow({ where: { id } });
   },
 
-  create(data: CreateTaskInput) {
-    return prisma.task.create({ data });
+  create(data: CreateTaskInput, createdById: string) {
+    return prisma.task.create({ data: { ...data, createdById } });
   },
 
   update(id: string, data: UpdateTaskInput) {

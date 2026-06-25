@@ -1,5 +1,6 @@
 import request from "supertest";
 import { createApp } from "../../app.js";
+import { signToken } from "../../lib/jwt.js";
 import { logger } from "@repo/logger";
 import { prisma } from "@repo/database";
 
@@ -35,6 +36,9 @@ const info = jest.mocked(logger.info);
 const error = jest.mocked(logger.error);
 const findMany = jest.mocked(prisma.task.findMany);
 
+// /api/tasks requires auth; sign a token the real requireAuth/jwt will accept.
+const authHeader = `Bearer ${signToken({ sub: "u1", email: "ada@example.com", role: "MEMBER" })}`;
+
 describe("request logging", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -43,7 +47,9 @@ describe("request logging", () => {
   it("logs each request with method, url and status", async () => {
     findMany.mockResolvedValue([] as never);
 
-    await request(createApp()).get("/api/tasks");
+    await request(createApp())
+      .get("/api/tasks")
+      .set("Authorization", authHeader);
 
     expect(info).toHaveBeenCalledWith(
       expect.any(String),
@@ -58,7 +64,9 @@ describe("request logging", () => {
   it("logs unhandled errors and still responds 500", async () => {
     findMany.mockRejectedValue(new Error("boom") as never);
 
-    const res = await request(createApp()).get("/api/tasks");
+    const res = await request(createApp())
+      .get("/api/tasks")
+      .set("Authorization", authHeader);
 
     expect(res.status).toBe(500);
     expect(error).toHaveBeenCalledTimes(1);
