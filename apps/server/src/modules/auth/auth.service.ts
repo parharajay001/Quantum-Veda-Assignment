@@ -51,4 +51,11 @@ export const authService = {
 
     return toPublicUser(user);
   },
+
+  // Full profile for the authenticated user — the JWT only carries id/email/role,
+  // so fetch the rest (name, avatarUrl) from the database.
+  async me(id: string): Promise<PublicUser> {
+    const user = await prisma.user.findUniqueOrThrow({ where: { id } });
+    return toPublicUser(user);
+  },
 };

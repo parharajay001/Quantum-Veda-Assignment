@@ -7,7 +7,11 @@ import { prisma } from "@repo/database";
 // bcrypt and jsonwebtoken run for real (deterministic, no DB).
 jest.mock("@repo/database", () => ({
   prisma: {
-    user: { findUnique: jest.fn(), create: jest.fn() },
+    user: {
+      findUnique: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
+      create: jest.fn(),
+    },
   },
   Prisma: {
     PrismaClientKnownRequestError: class PrismaClientKnownRequestError extends Error {
@@ -21,6 +25,7 @@ jest.mock("@repo/database", () => ({
 }));
 
 const findUnique = jest.mocked(prisma.user.findUnique);
+const findUniqueOrThrow = jest.mocked(prisma.user.findUniqueOrThrow);
 const create = jest.mocked(prisma.user.create);
 
 const buildUser = async (overrides: Record<string, unknown> = {}) => ({
@@ -131,6 +136,9 @@ describe("/api/auth", () => {
 
     it("returns the user when a valid cookie is sent", async () => {
       findUnique.mockResolvedValue((await buildUser()) as never);
+      findUniqueOrThrow.mockResolvedValue(
+        (await buildUser({ name: "Ada" })) as never,
+      );
 
       const agent = request.agent(createApp());
       await agent
@@ -140,7 +148,11 @@ describe("/api/auth", () => {
       const res = await agent.get("/api/auth/me");
 
       expect(res.status).toBe(200);
-      expect(res.body.user).toMatchObject({ email: "ada@example.com" });
+      expect(res.body.user).toMatchObject({
+        email: "ada@example.com",
+        name: "Ada",
+      });
+      expect(res.body.user).not.toHaveProperty("passwordHash");
     });
   });
 });

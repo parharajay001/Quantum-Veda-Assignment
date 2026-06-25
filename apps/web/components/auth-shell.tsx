@@ -109,7 +109,7 @@ function BrandPanel() {
 
 export function AuthShell({ children }: { children: ReactNode }) {
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
+    <div className="grid min-h-svh lg:grid-cols-2">
       <BrandPanel />
       <main className="flex items-center justify-center p-6 sm:p-10">
         <div className="w-full max-w-sm">
