@@ -9,6 +9,7 @@ Turborepo monorepo managed with **pnpm** (`pnpm@9`, Node >=18) for a task-manage
 - `apps/web` — Next.js 16 (App Router) + React 19 frontend, port 3000.
 - `apps/server` — Express 5 + TypeScript REST API, port 3001 (`/health`, `/api/tasks` CRUD).
 - `packages/database` (`@repo/database`) — Prisma + PostgreSQL: schema, generated client, and a `prisma` singleton.
+- `packages/logger` (`@repo/logger`) — shared logging: a winston server logger (`@repo/logger`, Node-only) and a browser-safe client logger (`@repo/logger/client`).
 - `packages/ui` (`@repo/ui`) — shared React components.
 - `packages/eslint-config`, `packages/typescript-config` — shared presets.
 
@@ -39,7 +40,7 @@ Database (Prisma, run against `@repo/database`):
 - `pnpm db:studio` — open Prisma Studio.
 - Other Prisma scripts (`db:deploy`, `db:push`) live in `packages/database/package.json`.
 
-Environment files: each app/package has its own `.env.example` — `packages/database` and `apps/server` (`DATABASE_URL`, `PORT`), and `apps/web` (`NEXT_PUBLIC_API_URL`, the backend base URL exposed to the browser). All env keys are declared in `turbo.json` `globalEnv` so Turbo caching and the `turbo/no-undeclared-env-vars` lint rule stay correct — add new keys there too.
+Environment files: each app/package has its own `.env.example` — `packages/database` and `apps/server` (`DATABASE_URL`, `PORT`, `LOG_LEVEL`), and `apps/web` (`NEXT_PUBLIC_API_URL`, the backend base URL exposed to the browser; `NEXT_PUBLIC_LOG_LEVEL` for the browser client logger). All env keys are declared in `turbo.json` `globalEnv` so Turbo caching and the `turbo/no-undeclared-env-vars` lint rule stay correct — add new keys there too.
 
 First-time setup: `pnpm db:up`, copy each `.env.example` → `.env` (in `packages/database`, `apps/server`, `apps/web`), then `pnpm db:migrate` and `pnpm dev`.
 
@@ -82,9 +83,9 @@ Config is centralized in two non-published packages, both referenced via `worksp
 - **service** — all business logic and Prisma access; no `req`/`res`. This is the only layer that touches `@repo/database`.
 - **validation** — zod schemas + inferred input types.
 
-Add a feature by creating a new `src/modules/<feature>/` folder and mounting its router in `src/app.ts`. Shared pieces live outside modules: `src/config/env.ts`, `src/middleware/` (`error.ts`, `validate.ts`). Errors are handled centrally in `src/middleware/error.ts` — Express 5 auto-forwards rejected promises and the thrown `ZodError`; `ZodError` → 400, Prisma `P2025` (not found) → 404. Relative imports use explicit `.js` extensions (NodeNext). Dev uses `tsx watch` (no build step); prod builds with `tsc` to `dist/` and runs `node dist/index.js`.
+Add a feature by creating a new `src/modules/<feature>/` folder and mounting its router in `src/app.ts`. Shared pieces live outside modules: `src/config/env.ts`, `src/middleware/` (`error.ts`, `validate.ts`, `request-logger.ts`). `requestLogger` is mounted in `createApp()` right after `express.json()` and logs one structured line per request (method, url, status, duration) via `@repo/logger`; the central error handler logs unhandled errors through the same logger. Errors are handled centrally in `src/middleware/error.ts` — Express 5 auto-forwards rejected promises and the thrown `ZodError`; `ZodError` → 400, Prisma `P2025` (not found) → 404. Relative imports use explicit `.js` extensions (NodeNext). Dev uses `tsx watch` (no build step); prod builds with `tsc` to `dist/` and runs `node dist/index.js`.
 
-**Web (`apps/web`):** Next.js 16 (App Router, `apps/web/app/`) + React 19. The web app's `check-types` runs `next typegen && tsc --noEmit` — run typegen before type-checking when route types matter.
+**Web (`apps/web`):** Next.js 16 (App Router, `apps/web/app/`) + React 19. The web app's `check-types` runs `next typegen && tsc --noEmit` — run typegen before type-checking when route types matter. Client error boundaries (`app/error.tsx`, `app/global-error.tsx`) report via `@repo/logger/client`, which POSTs to `app/api/log/route.ts`; that route forwards to the winston logger server-side. `next.config.js` lists `@repo/logger` in `transpilePackages` and keeps `winston` in `serverExternalPackages` so it is never bundled for the browser.
 
 ## Conventions
 

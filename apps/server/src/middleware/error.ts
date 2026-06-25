@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { Prisma } from "@repo/database";
+import { logger } from "@repo/logger";
 import { ZodError } from "zod";
 
 export function notFoundHandler(_req: Request, res: Response) {
@@ -15,14 +16,22 @@ export function errorHandler(
   _next: NextFunction,
 ) {
   if (err instanceof ZodError) {
-    return res.status(400).json({ error: "Validation failed", details: err.flatten() });
+    return res
+      .status(400)
+      .json({ error: "Validation failed", details: err.flatten() });
   }
 
   // P2025 = record required for the operation was not found.
-  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+  if (
+    err instanceof Prisma.PrismaClientKnownRequestError &&
+    err.code === "P2025"
+  ) {
     return res.status(404).json({ error: "Resource not found" });
   }
 
-  console.error(err);
+  logger.error("unhandled error", {
+    message: err instanceof Error ? err.message : String(err),
+    stack: err instanceof Error ? err.stack : undefined,
+  });
   return res.status(500).json({ error: "Internal server error" });
 }
