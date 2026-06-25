@@ -30,7 +30,7 @@ describe("/api/tasks", () => {
   });
 
   it("GET / returns the tasks from the database", async () => {
-    const tasks = [{ id: "1", title: "Test task", status: "TODO" }];
+    const tasks = [{ id: "1", title: "Test task", status: "DRAFT" }];
     findMany.mockResolvedValue(tasks as never);
 
     const res = await request(createApp()).get("/api/tasks");
